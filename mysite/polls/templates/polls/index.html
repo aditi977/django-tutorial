@@ -1,0 +1,20 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+    {% if latest_question_list %}
+    <ul>
+    {% for question in latest_question_list %}
+        <!--Link is hardcoded, and tightly-coupled approach makes challenging to change URLs on projects with a lot of templates.-->
+        <!-- <li><a href="/polls/{{ question.id }}/">{{ question.question_text }}</a></li>  -->
+        <li><a href="{% url 'polls:detail' question.id %}">{{ question.question_text }}</a></li> <!-- <<< you can remove a reliance on specific URL paths defined in your url configurations by using the {% url %} template tag-->
+    {% endfor %}
+    </ul>
+    {% else %}
+        <p>No polls are available.</p>
+    {% endif %}
+</body>
+</html>

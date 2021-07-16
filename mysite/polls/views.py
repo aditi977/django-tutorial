@@ -1,9 +1,10 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect 
 # from django.template import loader
 
 from django.shortcuts import get_object_or_404, render
-from .models import Question
-
+from .models import Question, Choice
+from django.urls import reverse
+from django.db.models import F
 from django.http import Http404
 
 # def index(request):
@@ -29,7 +30,7 @@ def index(request):
 #     return render(request, 'polls/detail.html', {'question': question})
 
 
-# shortcut to ^above function using get_object_or_404()
+# shortcut to ^above function by using get_object_or_404()
 # "The get_object_or_404() function takes a Django model as its first argument 
 # and an arbitrary number of keyword arguments, which it passes to the get() 
 # function of the model’s manager. It raises Http404 if the object doesn’t exist."
@@ -37,9 +38,35 @@ def detail(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     return render(request, 'polls/detail.html', {'question': question})
 
-def results(request, question_id):
-    response = "You're looking at the results of question %s."
-    return HttpResponse(response % question_id)
+# def results(request, question_id):
+#     response = "You're looking at the results of question %s."
+#     return HttpResponse(response % question_id)
 
+def results(request, question_id):
+    question = get_object_or_404(Question, pk=question_id)
+    return render(request, 'polls/results.html', {'question': question})
+
+# def vote(request, question_id):
+#     return HttpResponse("You're voting on question %s." % question_id)
+
+
+# NOTE: this has a race condition because two users could vote at the exact same time, messing up the vote count
+# SOLUTION: Using F(), we can allow a value to be directly updated in database bc it passes instructions directly to db, thus not having to deal with race conditions
 def vote(request, question_id):
-    return HttpResponse("You're voting on question %s." % question_id)
+    question = get_object_or_404(Question, pk=question_id)
+    try:
+        selected_choice = question.choice_set.get(pk=request.POST['choice'])
+    except (KeyError, Choice.DoesNotExist):
+        # Redisplay the question voting form.
+        return render(request, 'polls/detail.html', {
+            'question': question,
+            'error_message': "You didn't select a choice.",
+        })
+    else:
+        # avoiding race condition here
+        selected_choice.votes = F('votes') + 1
+        selected_choice.save()
+        # Always return an HttpResponseRedirect after successfully dealing
+        # with POST data. This prevents data from being posted twice if a
+        # user hits the Back button.
+        return HttpResponseRedirect(reverse('polls:results', args=(question.id,)))

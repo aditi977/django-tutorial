@@ -1,53 +1,40 @@
-from django.http import HttpResponse, HttpResponseRedirect 
-# from django.template import loader
-
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404, render
-from .models import Question, Choice
 from django.urls import reverse
-from django.db.models import F
-from django.http import Http404
+from django.views import generic
+from django.utils import timezone
 
-# def index(request):
-#     latest_question_list = Question.objects.order_by('-pub_date')[:5]
-#     template = loader.get_template('polls/index.html') # uses loader to get html template instead of coding it in here
-#     context = {
-#         'latest_question_list': latest_question_list,
-#     }
-#     return HttpResponse(template.render(context, request))
-
-# shortcut to ^above function using render() 
-# b/c "it’s a very common idiom to load a template, fill a context and return an HttpResponse object with the result of the rendered template." 
-def index(request):
-    latest_question_list = Question.objects.order_by('-pub_date')[:5]
-    context = {'latest_question_list': latest_question_list}
-    return render(request, 'polls/index.html', context)
-
-# def detail(request, question_id):
-#     try:
-#         question = Question.objects.get(pk=question_id)
-#     except Question.DoesNotExist:
-#         raise Http404("Question does not exist")
-#     return render(request, 'polls/detail.html', {'question': question})
+from .models import Choice, Question
 
 
-# shortcut to ^above function by using get_object_or_404()
-# "The get_object_or_404() function takes a Django model as its first argument 
-# and an arbitrary number of keyword arguments, which it passes to the get() 
-# function of the model’s manager. It raises Http404 if the object doesn’t exist."
-def detail(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'polls/detail.html', {'question': question})
+class IndexView(generic.ListView):
+    template_name = 'polls/index.html'
+    context_object_name = 'latest_question_list'
 
-# def results(request, question_id):
-#     response = "You're looking at the results of question %s."
-#     return HttpResponse(response % question_id)
+    def get_queryset(self):
+        """
+        Return the last five published questions (not including those set to be
+        published in the future).
+        """
+        return Question.objects.filter(
+            pub_date__lte=timezone.now()
+        ).order_by('-pub_date')[:5]
 
-def results(request, question_id):
-    question = get_object_or_404(Question, pk=question_id)
-    return render(request, 'polls/results.html', {'question': question})
 
-# def vote(request, question_id):
-#     return HttpResponse("You're voting on question %s." % question_id)
+class DetailView(generic.DetailView):
+    model = Question
+    template_name = 'polls/detail.html'
+
+    def get_queryset(self):
+        """
+        Excludes any questions that aren't published yet.
+        """
+        return Question.objects.filter(pub_date__lte=timezone.now())
+
+
+class ResultsView(generic.DetailView):
+    model = Question
+    template_name = 'polls/results.html'
 
 
 # NOTE: this has a race condition because two users could vote at the exact same time, messing up the vote count

@@ -2,6 +2,7 @@ import datetime
 
 from django.db import models
 from django.utils import timezone
+from django.contrib import admin
 
 # Each model is a subclass of django.db.models.Model
 class Question(models.Model):
@@ -13,6 +14,12 @@ class Question(models.Model):
     # python version of a toString() method
     def __str__(self):
         return self.question_text
+
+    @admin.display(
+        boolean=True,
+        ordering='pub_date',
+        description='Published recently?',
+    )
 
     # custom method
     def was_published_recently(self):
